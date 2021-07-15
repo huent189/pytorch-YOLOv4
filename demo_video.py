@@ -22,7 +22,7 @@ import argparse
 """hyper parameters"""
 use_cuda = True
 
-def detect_cv2(cfgfile, weightfile, imgfiles):
+def detect_cv2(cfgfile, weightfile, vid):
     import cv2
     m = Darknet(cfgfile)
 
@@ -41,8 +41,14 @@ def detect_cv2(cfgfile, weightfile, imgfiles):
     else:
         namesfile = 'data/x.names'
     class_names = load_class_names(namesfile)
-    for imgfile in imgfiles:
-      img = cv2.imread(imgfile)
+    cap = cv2.VideoCapture(vid)
+    out = cv2.VideoWriter('/content/yolo_rime.avi',cv2.VideoWriter_fourcc('M','J','P','G'), cap.get(cv2.CAP_PROP_FPS), (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) ))
+    while(cap.isOpened()):
+      ret, img = cap.read()
+      # print(img.shape)
+      if ret != True:
+        break
+      # img = cv2.imread(imgfile)
       sized = cv2.resize(img, (m.width, m.height))
       sized = cv2.cvtColor(sized, cv2.COLOR_BGR2RGB)
     
@@ -50,11 +56,11 @@ def detect_cv2(cfgfile, weightfile, imgfiles):
           start = time.time()
           boxes = do_detect(m, sized, 0.4, 0.6, use_cuda)
           finish = time.time()
-          if i == 1:
-              print('%s: Predicted in %f seconds.' % (imgfile, (finish - start)))
 
-      plot_boxes_cv2(img, boxes[0], savename=os.path.join('/content/yolo_rime', os.path.split(imgfile)[-1]), class_names=class_names)
-
+      im  = plot_boxes_cv2(img, boxes[0], class_names=class_names)
+      out.write(im)
+    cap.release()
+    out.release()
 
 def detect_cv2_camera(cfgfile, weightfile):
     import cv2
@@ -153,7 +159,7 @@ if __name__ == '__main__':
     import glob
     args = get_args()
     if args.imgfile:
-        detect_cv2(args.cfgfile, args.weightfile, glob.glob(args.imgfile + "*"))
+        detect_cv2(args.cfgfile, args.weightfile, args.imgfile)
         # detect_imges(args.cfgfile, args.weightfile)
         # detect_cv2(args.cfgfile, args.weightfile, args.imgfile)
         # detect_skimage(args.cfgfile, args.weightfile, args.imgfile)
